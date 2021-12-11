@@ -61,15 +61,19 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $UnicodeStringParameter
     )
 
+    $OldConsoleOut = [Console]::Out
+    $StringWriter = New-Object IO.StringWriter
+    [Console]::SetOut($StringWriter)
+
     ###################################
     ##########  Tools Stuff  ##########
     ###################################
     # Basic function to test admin rights
     # Use for Beacon API
-    Function Test-IsAdmin 
+    Function Test-IsAdmin
     {
         $user = [Security.Principal.WindowsIdentity]::GetCurrent();
-        (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator) 
+        (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
     }
 
     ###################################
@@ -225,7 +229,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $TypeBuilder.DefineField('VirtualAddress', [UInt32], 'Public') | Out-Null
         $TypeBuilder.DefineField('SymbolTableIndex', [UInt32], 'Public') | Out-Null
         $TypeBuilder.DefineField('Type', [UInt16], 'Public') | Out-Null
-        
+
         $COFF_RELOCATION = $TypeBuilder.CreateType()
         $Win32Types | Add-Member -MemberType NoteProperty -Name COFF_RELOCATION -Value $COFF_RELOCATION
 
@@ -239,7 +243,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $TypeBuilder.DefineField('Type', [UInt16], 'Public') | Out-Null
         $TypeBuilder.DefineField('StorageClass', [Byte], 'Public') | Out-Null
         $TypeBuilder.DefineField('NumberOfAuxSymbols', [Byte], 'Public') | Out-Null
-        
+
         $COFF_SYMBOL = $TypeBuilder.CreateType()
         $Win32Types | Add-Member -MemberType NoteProperty -Name COFF_SYMBOL -Value $COFF_SYMBOL
 
@@ -258,7 +262,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $TypeBuilder.DefineField('Type', [UInt16], 'Public') | Out-Null
         $TypeBuilder.DefineField('StorageClass', [Byte], 'Public') | Out-Null
         $TypeBuilder.DefineField('NumberOfAuxSymbols', [Byte], 'Public') | Out-Null
-        
+
         $COFF_SYMBOL_NAMED = $TypeBuilder.CreateType()
         $Win32Types | Add-Member -MemberType NoteProperty -Name COFF_SYMBOL_NAMED -Value $COFF_SYMBOL_NAMED
 
@@ -297,7 +301,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         # Return the address of the function
         Write-Output $GetProcAddress.Invoke($null, @([System.Runtime.InteropServices.HandleRef]$HandleRef, $Procedure))
     }
-    
+
     #Function written by Matt Graeber, Twitter: @mattifestation, Blog: http://www.exploit-monday.com/
     Function Get-DelegateType
     {
@@ -446,7 +450,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $TypeBuilder.DefineField('buffer', [IntPtr], 'Public') | Out-Null
         $TypeBuilder.DefineField('length', [int], 'Public') | Out-Null
         $TypeBuilder.DefineField('size', [int], 'Public') | Out-Null
-        
+
         $datap = $TypeBuilder.CreateType()
         $BeaconTypes | Add-Member -MemberType NoteProperty -Name datap -Value $datap
 
@@ -457,7 +461,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $TypeBuilder.DefineField('buffer', [IntPtr], 'Public') | Out-Null
         $TypeBuilder.DefineField('length', [int], 'Public') | Out-Null
         $TypeBuilder.DefineField('size', [int], 'Public') | Out-Null
-        
+
         $formatp = $TypeBuilder.CreateType()
         $BeaconTypes | Add-Member -MemberType NoteProperty -Name formatp -Value $formatp
 
@@ -648,7 +652,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                 {
                     [System.Runtime.InteropServices.Marshal]::Copy(@($FormatObject.length), 0, $Size, 1)
                 }
-                
+
                 return $FormatObject.buffer
             }
 
@@ -747,7 +751,8 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                 [System.Runtime.InteropServices.Marshal]::Copy($Data, $ManagedTemp, 0, $Len)
 
                 Write-Host "=============================== Beacon Output =============================="
-                $ManagedTemp | Format-Hex | Write-Host
+                $asciiString = [System.Text.Encoding]::UTF8.GetString($ManagedTemp)
+                $asciiString | Write-Host
                 Write-Host "============================================================================"
             }
 
@@ -787,7 +792,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
             # NOT IMPLEMENTED
             static [void] BeaconInjectProcess([IntPtr] $HProc, [int] $Pid, [IntPtr] $Payload, [int] $PayloadLen, [int] $PayloadOffset, [IntPtr] $Arg, [int] $ArgLen)
             {
-                
+
             }
 
             # NOT IMPLEMENTED
@@ -810,12 +815,12 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                     $BytesArray += [Byte]0
                     $BytesArray += [Byte]0
                     [System.Runtime.InteropServices.Marshal]::Copy($BytesArray, 0, $Dst, ($BytesArray.Length,$Max | Measure -Min).Minimum)
-                } 
+                }
                 catch
                 {
                     return $false
                 }
-                
+
                 return $true
             }
         }
@@ -1086,13 +1091,13 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
 
          # Compute start and end offset
         [IntPtr]$OffsetPtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$SourceAddress) ($VirtualAddress))
-        [IntPtr]$EndOffsetPtr = [Int64]$OffsetPtr+4                   
+        [IntPtr]$EndOffsetPtr = [Int64]$OffsetPtr+4
 
         # compute the relative address
         if($Type -eq $Win32Constants.IMAGE_REL_AMD64_REL32)
         {
             # retrieve actual value of the offset
-            $OffsetValue = [System.Runtime.InteropServices.Marshal]::PtrToStructure($OffsetPtr, [Type][Int32])  
+            $OffsetValue = [System.Runtime.InteropServices.Marshal]::PtrToStructure($OffsetPtr, [Type][Int32])
             $OffsetValue += [Int64](Sub-SignedIntAsUnsigned ([Int64]$DestAddress) ($EndOffsetPtr))
             $OffsetValueArray = @($OffsetValue)
             [System.Runtime.InteropServices.Marshal]::Copy([Int32[]]$OffsetValueArray, 0, $OffsetPtr, 1) | Out-Null
@@ -1100,7 +1105,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         elseif($Type -eq $Win32Constants.IMAGE_REL_AMD64_ADDR32NB)
         {
             # retrieve actual value of the offset
-            $OffsetValue = [System.Runtime.InteropServices.Marshal]::PtrToStructure($OffsetPtr, [Type][Int32])  
+            $OffsetValue = [System.Runtime.InteropServices.Marshal]::PtrToStructure($OffsetPtr, [Type][Int32])
             $OffsetValue = [Int64](Sub-SignedIntAsUnsigned ([Int64]$DestAddress) ($EndOffsetPtr))
             $OffsetValueArray = @($OffsetValue)
             [System.Runtime.InteropServices.Marshal]::Copy([Int32[]]$OffsetValueArray, 0, $OffsetPtr, 1) | Out-Null
@@ -1108,7 +1113,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         elseif($Type -eq $Win32Constants.IMAGE_REL_AMD64_ADDR64)
         {
             # retrieve actual value of the offset
-            $OffsetValue = [System.Runtime.InteropServices.Marshal]::PtrToStructure($OffsetPtr, [Type][Int64])  
+            $OffsetValue = [System.Runtime.InteropServices.Marshal]::PtrToStructure($OffsetPtr, [Type][Int64])
             $OffsetValue = [Int64](Sub-SignedIntAsUnsigned ([Int64]$DestAddress) ($EndOffsetPtr))
             $OffsetValueArray = @($OffsetValue)
             [System.Runtime.InteropServices.Marshal]::Copy([Int64[]]$OffsetValueArray, 0, $OffsetPtr, 1) | Out-Null
@@ -1118,10 +1123,10 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
             Write-Error ("Unknown Relocation : " + $Relocation.Type)
         }
 
-        Write-Debug ("[+] Apply relocation at " + ("0x{0:x4}" -f [Int64]$OffsetPtr) + " " +("0x{0:x4}" -f [Int32]$OffsetValue))         
+        Write-Debug ("[+] Apply relocation at " + ("0x{0:x4}" -f [Int64]$OffsetPtr) + " " +("0x{0:x4}" -f [Int32]$OffsetValue))
     }
 
-    
+
     # Function use to marshal beacon argument
     # Beacon arguement are Length Value buffer
     Function Load-BeaconParameters
@@ -1154,7 +1159,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                     $ArgBytes = [System.Text.Encoding]::ASCII.GetBytes($Arg)
                     # We always add null terminated byte
                     $ArgBytes += [Byte]0
-                } 
+                }
             }
             elseif($Arg.GetType() -eq [int])
             {
@@ -1175,12 +1180,12 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         $Offset = 0
         foreach($ArgBytes in $ArgumentBytes)
         {
-            
+
             [IntPtr]$OffsetPtrHeader = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$UnmanagedArgBytes) ($Offset))
             [IntPtr]$OffsetPtrBody = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$UnmanagedArgBytes) ($Offset + 4))
 
             $EncodingLength = [System.BitConverter]::GetBytes([UInt32]$ArgBytes.Length)
-            
+
             [System.Runtime.InteropServices.Marshal]::Copy($EncodingLength, 0, $OffsetPtrHeader, $EncodingLength.Length)
             [System.Runtime.InteropServices.Marshal]::Copy($ArgBytes, 0, $OffsetPtrBody, $ArgBytes.Length)
             $Offset += 4 + $ArgBytes.Length
@@ -1230,22 +1235,22 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         [System.Runtime.InteropServices.Marshal]::Copy($CoffBytes, 0, $UnmanagedCoffBytes, $CoffBytes.Length) | Out-Null
 
         $CoffHeadersInfo = [System.Runtime.InteropServices.Marshal]::PtrToStructure($UnmanagedCoffBytes, [Type]$Win32Types.IMAGE_FILE_HEADER)
-        
+
         $CoffInfo | Add-Member -MemberType NoteProperty -Name 'IMAGE_FILE_HEADER' -Value ($CoffHeadersInfo)
-       
+
         [IntPtr]$SectionHeaderPtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$UnmanagedCoffBytes) ([System.Runtime.InteropServices.Marshal]::SizeOf([Type]$Win32Types.IMAGE_FILE_HEADER)))
         [IntPtr]$SymbolTablePtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$UnmanagedCoffBytes) ($CoffInfo.IMAGE_FILE_HEADER.PointerToSymbolTable))
         [IntPtr]$SymbolValuePtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$SymbolTablePtr) ($CoffInfo.IMAGE_FILE_HEADER.NumberOfSymbols * [System.Runtime.InteropServices.Marshal]::SizeOf([Type]$Win32Types.COFF_SYMBOL)))
-        
+
         $Sections = @()
         # Loading all sections
         for( $i = 0; $i -lt $CoffInfo.IMAGE_FILE_HEADER.NumberOfSections; $i++)
         {
             $CurrentSection = New-Object System.Object
             [IntPtr]$CurrentSectionHeaderPtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$SectionHeaderPtr) ($i * [System.Runtime.InteropServices.Marshal]::SizeOf([Type]$Win32Types.IMAGE_SECTION_HEADER)))
-            
+
             $SectionHeader = [System.Runtime.InteropServices.Marshal]::PtrToStructure($CurrentSectionHeaderPtr, [Type]$Win32Types.IMAGE_SECTION_HEADER)
-            
+
             $CurrentSection | Add-Member -MemberType NoteProperty -Name 'IMAGE_SECTION_HEADER' -Value ($SectionHeader)
 
             $CurrentSectionName = [System.Text.Encoding]::Default.GetString($CurrentSection.IMAGE_SECTION_HEADER.Name)
@@ -1258,18 +1263,18 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                # Ignore .bss section because already initialized with zeros
                if ($CurrentSectionName -ne ".bss")
                {
-                    [System.Runtime.InteropServices.Marshal]::Copy($CoffBytes, [Int32]$CurrentSection.IMAGE_SECTION_HEADER.PointerToRawData, $Handle, $CurrentSection.IMAGE_SECTION_HEADER.SizeOfRawData) | Out-Null         
+                    [System.Runtime.InteropServices.Marshal]::Copy($CoffBytes, [Int32]$CurrentSection.IMAGE_SECTION_HEADER.PointerToRawData, $Handle, $CurrentSection.IMAGE_SECTION_HEADER.SizeOfRawData) | Out-Null
                }
                Write-Host "[+] Mapping of" $CurrentSectionName "at " ("0x{0:x4}" -f [Int64]$CurrentSection.Handle)
             }
 
             $Sections += ,$CurrentSection
-            
+
         }
 
         $Size = New-Object UIntPtr 2048
         $GotHandle = $Win32Functions.VirtualAlloc.Invoke([IntPtr]::Zero, [UIntPtr]$Size, $Win32Constants.MEM_COMMIT -bor $Win32Constants.MEM_RESERVE, $Win32Constants.PAGE_EXECUTE_READWRITE)
-        
+
         $GotTable = @()
 
         # Apply Relocation for all sections
@@ -1290,20 +1295,20 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                     # Compute symbol offset
                     [IntPtr]$SymbolPtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$SymbolValuePtr) ($SymbolEntry.Value2))
                     $Symbol = [System.Runtime.InteropServices.Marshal]::PtrToStringAnsi($SymbolPtr)
-       
+
                     $Function = Resolve-Extern $Symbol $Win32Functions $BeaconAPI
-                    
+
                     $GotTable += ,$Function
-                    
+
                     [IntPtr]$GotOffset = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$GotHandle) (8 * ($GotTable.Length - 1)))
 
                     Apply-Relocation -VirtualAddress $Relocation.VirtualAddress -SourceAddress $CurrentSection.Handle -DestAddress $GotOffset -Type $Relocation.Type -Win32Constants $Win32Constants
-                    
+
                 }
                 # Direct relocation
                 elseif (($SymbolEntry.StorageClass -eq $Win32Constants.IMAGE_SYM_CLASS_STATIC) -or ($SymbolEntry.StorageClass -eq $Win32Constants.IMAGE_SYM_CLASS_LABEL))
                 {
-                    Apply-Relocation -VirtualAddress $Relocation.VirtualAddress -SourceAddress $CurrentSection.Handle -DestAddress $Sections[$SymbolEntry.SectionNumber - 1].Handle -Type $Relocation.Type -Win32Constants $Win32Constants  
+                    Apply-Relocation -VirtualAddress $Relocation.VirtualAddress -SourceAddress $CurrentSection.Handle -DestAddress $Sections[$SymbolEntry.SectionNumber - 1].Handle -Type $Relocation.Type -Win32Constants $Win32Constants
                 }
             }
         }
@@ -1320,7 +1325,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
             [IntPtr]$SymbolEntryPtr = [IntPtr](Add-SignedIntAsUnsigned ([Int64]$SymbolTablePtr) ($i * [System.Runtime.InteropServices.Marshal]::SizeOf([Type]$Win32Types.COFF_SYMBOL_NAMED)))
             $SymbolEntryNamed = [System.Runtime.InteropServices.Marshal]::PtrToStructure($SymbolEntryPtr, [Type]$Win32Types.COFF_SYMBOL_NAMED)
             $SymbolEntry = [System.Runtime.InteropServices.Marshal]::PtrToStructure($SymbolEntryPtr, [Type]$Win32Types.COFF_SYMBOL)
-           
+
             # Ignoring unamed symbol
             # These list is used to compute entry point
             if ($SymbolEntry.StorageCLass -ne $Win32Constants.IMAGE_SYM_CLASS_EXTERNAL -and $SymbolEntry.StorageCLass -ne $Win32Constants.IMAGE_SYM_CLASS_STATIC -and $SymbolEntry.StorageCLass -ne $Win32Constants.IMAGE_SYM_CLASS_LABEL)
@@ -1401,7 +1406,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
             if ($Symbol.SymbolName -eq $EntryPoint)
             {
                 [IntPtr]$EntryPointAddr = [IntPtr](Add-SignedIntAsUnsigned ($Bof.Sections[$Symbol.SectionNumber - 1].Handle) ($Symbol.Value))
-                
+
                 # Create a delegate for classic beacon entry point
                 $EntrypPointDelegate = Get-DelegateType @([IntPtr], [UInt32]) ([UInt32])
                 $EntrypPoint = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($EntryPointAddr, $EntrypPointDelegate)
@@ -1422,11 +1427,11 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
 
 ██╗███╗   ██╗██╗   ██╗ ██████╗ ██╗  ██╗███████╗    ██████╗  ██████╗ ███████╗
 ██║████╗  ██║██║   ██║██╔═══██╗██║ ██╔╝██╔════╝    ██╔══██╗██╔═══██╗██╔════╝
-██║██╔██╗ ██║██║   ██║██║   ██║█████╔╝ █████╗█████╗██████╔╝██║   ██║█████╗  
-██║██║╚██╗██║╚██╗ ██╔╝██║   ██║██╔═██╗ ██╔══╝╚════╝██╔══██╗██║   ██║██╔══╝  
-██║██║ ╚████║ ╚████╔╝ ╚██████╔╝██║  ██╗███████╗    ██████╔╝╚██████╔╝██║     
-╚═╝╚═╝  ╚═══╝  ╚═══╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝    ╚═════╝  ╚═════╝ ╚═╝     
-                                               
+██║██╔██╗ ██║██║   ██║██║   ██║█████╔╝ █████╗█████╗██████╔╝██║   ██║█████╗
+██║██║╚██╗██║╚██╗ ██╔╝██║   ██║██╔═██╗ ██╔══╝╚════╝██╔══██╗██║   ██║██╔══╝
+██║██║ ╚████║ ╚████╔╝ ╚██████╔╝██║  ██╗███████╗    ██████╔╝╚██████╔╝██║
+╚═╝╚═╝  ╚═══╝  ╚═══╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝    ╚═════╝  ╚═════╝ ╚═╝
+
   [v0.1 Made with love by Airbus CERT https://github.com/airbus-cert]
 
 
@@ -1469,4 +1474,8 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
 
     # Release unmanaged ressource for entire bof
     Unload-Bof -Bof $bof -Win32Functions $Win32Functions -Win32Constants $Win32Constants
+
+    [Console]::SetOut($OldConsoleOut)
+    $Results = $StringWriter.ToString()
+    $Results
 }
