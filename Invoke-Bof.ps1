@@ -6,16 +6,16 @@ This is a module used to test offensive BOFs to create better detection rules.
 As many offensive developers publish many BOFs directly on GitHub, this module
 can simplify writing unit tests for detection rules.
 
-This script will load the BOF file (aka COFF file) into memory, map all sections, 
-perform relocation, serialize beacon parameters, and jump into the entry point 
+This script will load the BOF file (aka COFF file) into memory, map all sections,
+perform relocation, serialize beacon parameters, and jump into the entry point
 selected by the user.
 
 Many technics or functions are directly inspired by PowerSploit offensive scripts.
 
-Author: citronneur, Twitter: @citronneur   
-License: Apache License 2.0  
-Required Dependencies: None  
-Optional Dependencies: None  
+Author: citronneur, Twitter: @citronneur
+License: Apache License 2.0
+Required Dependencies: None
+Optional Dependencies: None
 
 .DESCRIPTION
 
@@ -514,7 +514,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
 
                 if($ParserObject.length -eq $ParserObject.size)
                 {
-                    Write-Host "[!] Beacon asked more parameter than expected !!!"
+                    [Console]::WriteLine("[!] Beacon asked more parameter than expected !!!")
                     return [IntPtr]::Zero
                 }
 
@@ -562,7 +562,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
 
                 if (($IntPtr -eq [IntPtr]::Zero) -or ($SizeRef -ne 4))
                 {
-                    Write-Host "[!] Invalid parameter, expected int and have parameter of size" $SizeRef
+                    [Console]::WriteLine("[!] Invalid parameter, expected int and have parameter of size" + $SizeRef)
                     return 0
                 }
 
@@ -740,7 +740,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
             # Print into powershell console
             static [void] BeaconPrintf([int] $Type, [string] $Fmt, [IntPtr]$a1, [IntPtr]$a2)
             {
-                [BeaconAPI]::Printf($Fmt, $a1, $a2) | Write-Host
+                [Console]::WriteLine([BeaconAPI]::Printf($Fmt, $a1, $a2))
             }
 
             # Dump hex data in console to audit format buffer for example
@@ -750,10 +750,10 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                 $ManagedTemp = New-Object Byte[] $Len
                 [System.Runtime.InteropServices.Marshal]::Copy($Data, $ManagedTemp, 0, $Len)
 
-                Write-Host "=============================== Beacon Output =============================="
+                [Console]::WriteLine("=============================== Beacon Output ==============================")
                 $asciiString = [System.Text.Encoding]::UTF8.GetString($ManagedTemp)
-                $asciiString | Write-Host
-                Write-Host "============================================================================"
+                [Console]::WriteLine($asciiString)
+                [Console]::WriteLine("============================================================================")
             }
 
             ############################
@@ -1039,7 +1039,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
 
         if ($ResolvedAPI.Length -ne 2)
         {
-            Write-Host "[!] Unable to parse API name : " $Name " /!\ continue without resolving /!\"
+            [Console]::WriteLine("[!] Unable to parse API name : " + $Name + " /!\ continue without resolving /!\")
 
             return [IntPtr]::Zero
         }
@@ -1265,7 +1265,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                {
                     [System.Runtime.InteropServices.Marshal]::Copy($CoffBytes, [Int32]$CurrentSection.IMAGE_SECTION_HEADER.PointerToRawData, $Handle, $CurrentSection.IMAGE_SECTION_HEADER.SizeOfRawData) | Out-Null
                }
-               Write-Host "[+] Mapping of" $CurrentSectionName "at " ("0x{0:x4}" -f [Int64]$CurrentSection.Handle)
+               [Console]::WriteLine("[+] Mapping of" + $CurrentSectionName + "at " + ("0x{0:x4}" -f [Int64]$CurrentSection.Handle))
             }
 
             $Sections += ,$CurrentSection
@@ -1411,11 +1411,12 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
                 $EntrypPointDelegate = Get-DelegateType @([IntPtr], [UInt32]) ([UInt32])
                 $EntrypPoint = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($EntryPointAddr, $EntrypPointDelegate)
 
-                Write-Host "[+] Jump into beacon at" ("0x{0:x4}" -f [Int64]$EntryPointAddr)
+                [Console]::WriteLine("[+] Jump into beacon at" + ("0x{0:x4}" -f [Int64]$EntryPointAddr))
 
-                Write-Host "****************************************************************************"
-                $EntrypPoint.Invoke($ArgumentBytes, $ArgumentBytesLength) | Out-Null
-                Write-Host "****************************************************************************"
+                [Console]::WriteLine("****************************************************************************")
+                $beaconReturn = $EntrypPoint.Invoke($ArgumentBytes, $ArgumentBytesLength) | Out-Null
+                [Console]::WriteLine($beaconReturn)
+                [Console]::WriteLine("****************************************************************************")
                 return
             }
         }
@@ -1423,7 +1424,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
         Write-Error ("Unable to find entry point name "+$EntryPoint)
     }
 
-    Write-Host "
+    [Console]::WriteLine("
 
 ██╗███╗   ██╗██╗   ██╗ ██████╗ ██╗  ██╗███████╗    ██████╗  ██████╗ ███████╗
 ██║████╗  ██║██║   ██║██╔═══██╗██║ ██╔╝██╔════╝    ██╔══██╗██╔═══██╗██╔════╝
@@ -1435,8 +1436,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
   [v0.1 Made with love by Airbus CERT https://github.com/airbus-cert]
 
 
-"
-
+")
     # Retrieve Win32 Types
     $Win32Types = Get-Win32Types
 
@@ -1475,6 +1475,7 @@ Invoke-Bof -BOFBytes $BOFBytes -EntryPoint go -ArgumentList "foo",5
     # Release unmanaged ressource for entire bof
     Unload-Bof -Bof $bof -Win32Functions $Win32Functions -Win32Constants $Win32Constants
 
+    # Restore the regular STDOUT object
     [Console]::SetOut($OldConsoleOut)
     $Results = $StringWriter.ToString()
     $Results
